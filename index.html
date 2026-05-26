@@ -186,10 +186,6 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
 
 
 /* ── PRODUCT ARRIVALS ── */
-.arrival-stripe-progro::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-progro);border-radius:0}
-.arrival-stripe-fhg::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-fhg);border-radius:0}
-.arrival-stripe-pa::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-pa);border-radius:0}
-.arrival-stripe-multi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--c-progro),var(--c-fhg),var(--c-pa));border-radius:0}
 .arrival-pills{display:flex;flex-direction:column;gap:2px;margin-top:4px}
 .arrival-pill{font-family:'Syne Mono',monospace;font-size:6.5px;letter-spacing:0.5px;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .arrival-pill-progro{color:var(--c-progro);background:var(--green-dim);border:1px solid rgba(61,255,160,0.2)}
@@ -584,21 +580,13 @@ function buildCalendar(month) {
     const isExact = cv === 0;
 
     const cell = document.createElement('div');
-    // Determine arrival stripe class
     const cellArrivals = ARRIVALS[ds] || [];
-    let stripeClass = '';
-    if (cellArrivals.length > 1) stripeClass = 'arrival-stripe-multi';
-    else if (cellArrivals.length === 1) {
-      const src = cellArrivals[0].source.toLowerCase();
-      stripeClass = src === 'progro' ? 'arrival-stripe-progro' : src === 'fhg' ? 'arrival-stripe-fhg' : 'arrival-stripe-pa';
-    }
 
     cell.className = ['cal-cell',
       data ? 'has-data' : 'empty',
       !isCurrentMonth ? 'outside-month' : '',
       isToday ? 'today' : '',
-      isOver ? 'over' : (isExact && data ? 'ct-exact' : ''),
-      stripeClass
+      isOver ? 'over' : (isExact && data ? 'ct-exact' : '')
     ].filter(Boolean).join(' ');
 
     const dayNum = d.getDate();
