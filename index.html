@@ -388,8 +388,11 @@ async function saveChangeLogEntry(entry) {
   }
 }
 
-async function fetchChangeLog() {
-  const rows = await sbFetch('change_log?order=changed_at.desc&limit=50');
+async function fetchChangeLog(month) {
+  const startDate = month + '-01';
+  const [yr, mo] = month.split('-').map(Number);
+  const endDate = new Date(yr, mo, 0).toISOString().split('T')[0]; // last day of month
+  const rows = await sbFetch(`change_log?date_changed=gte.${startDate}&date_changed=lte.${endDate}&order=changed_at.desc&limit=100`);
   return rows.map(r => ({
     ts: new Date(r.changed_at).toLocaleString('en-US', {month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true}),
     date: new Date(r.date_changed + 'T12:00:00').toLocaleDateString('en-US', {month:'short',day:'numeric'}),
@@ -421,10 +424,6 @@ async function init() {
 
   await loadMonth(currentMonth);
 
-  try {
-    changeLog = await fetchChangeLog();
-    renderLog();
-  } catch(e) { console.error('Change log fetch failed:', e); }
 }
 
 async function loadMonth(month) {
@@ -443,6 +442,11 @@ async function loadMonth(month) {
     } catch(e) {}
     buildCalendar(month);
     setTimestamp();
+    // Reload change log for this month
+    try {
+      changeLog = await fetchChangeLog(month);
+      renderLog();
+    } catch(e) { console.error('Change log fetch failed:', e); }
   } catch(e) {
     showError('Failed to load schedule. Check your connection.');
     console.error(e);
@@ -753,7 +757,7 @@ async function saveDay() {
     setTimeout(() => {
       closeModal();
       buildCalendar(currentMonth);
-      fetchChangeLog().then(log => { changeLog = log; renderLog(); });
+      fetchChangeLog(currentMonth).then(log => { changeLog = log; renderLog(); });
     }, 600);
 
   } catch(e) {
