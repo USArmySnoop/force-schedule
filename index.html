@@ -184,6 +184,21 @@ header::after{content:'';display:block;height:1px;background:linear-gradient(90d
 /* MOBILE */
 @media(max-width:480px){.app{padding:12px 8px 36px}.cal-cell{min-height:64px;padding:5px 3px}.cell-date{font-size:13px;margin-bottom:3px}.fac-lbl{display:none}.fac-num{font-size:7px;width:10px}.day-head{font-size:7px;padding:9px 2px;letter-spacing:1px}.word-force,.word-schedule{font-size:38px}.month-btn{padding:8px 12px;font-size:9px}}
 
+
+/* ── PRODUCT ARRIVALS ── */
+.arrival-stripe-progro::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-progro);border-radius:0}
+.arrival-stripe-fhg::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-fhg);border-radius:0}
+.arrival-stripe-pa::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--c-pa);border-radius:0}
+.arrival-stripe-multi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--c-progro),var(--c-fhg),var(--c-pa));border-radius:0}
+.arrival-pills{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.arrival-pill{font-family:'Syne Mono',monospace;font-size:6.5px;letter-spacing:0.5px;padding:1px 4px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.arrival-pill-progro{color:var(--c-progro);background:var(--green-dim);border:1px solid rgba(61,255,160,0.2)}
+.arrival-pill-fhg{color:var(--c-fhg);background:var(--amber-dim);border:1px solid rgba(255,201,77,0.2)}
+.arrival-pill-pa{color:var(--c-pa);background:rgba(77,200,255,0.12);border:1px solid rgba(77,200,255,0.2)}
+.arrival-modal-section{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.arrival-modal-title{font-family:'Syne Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:2px}
+.arrival-modal-item{display:flex;align-items:center;gap:8px;font-family:'Cabinet Grotesk',sans-serif;font-size:13px;color:var(--text)}
+.arrival-modal-pip{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:var(--surface)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
@@ -326,6 +341,20 @@ const AVAILABLE_MONTHS = [
   { key: '2026-06', label: 'JUN 2026' },
   { key: '2026-07', label: 'JUL 2026' },
 ];
+
+
+// ── PRODUCT ARRIVAL DATA ──
+// Keyed by date. Each entry is an array of arrivals for that day.
+// source: facility name, room: room identifier, color key matches FAC_CONFIG
+const ARRIVALS = {
+  '2026-06-07': [{source:'ProGro', room:'W10',   color:'#3dffa0'}],
+  '2026-06-14': [{source:'ProGro', room:'W9/W11',color:'#3dffa0'}],
+  '2026-06-16': [{source:'PA',     room:'F1/F2', color:'#4dc8ff'}],
+  '2026-06-17': [{source:'FHG',    room:'R1',    color:'#ffc94d'}],
+  '2026-06-21': [{source:'ProGro', room:'E2',    color:'#3dffa0'}],
+  '2026-06-28': [{source:'ProGro', room:'W12',   color:'#3dffa0'}],
+  '2026-06-30': [{source:'PA',     room:'F3/F4', color:'#4dc8ff'}],
+};
 
 // ── STATE ──
 let scheduleData = {};   // keyed by date string '2026-05-01'
@@ -555,11 +584,21 @@ function buildCalendar(month) {
     const isExact = cv === 0;
 
     const cell = document.createElement('div');
+    // Determine arrival stripe class
+    const cellArrivals = ARRIVALS[ds] || [];
+    let stripeClass = '';
+    if (cellArrivals.length > 1) stripeClass = 'arrival-stripe-multi';
+    else if (cellArrivals.length === 1) {
+      const src = cellArrivals[0].source.toLowerCase();
+      stripeClass = src === 'progro' ? 'arrival-stripe-progro' : src === 'fhg' ? 'arrival-stripe-fhg' : 'arrival-stripe-pa';
+    }
+
     cell.className = ['cal-cell',
       data ? 'has-data' : 'empty',
       !isCurrentMonth ? 'outside-month' : '',
       isToday ? 'today' : '',
-      isOver ? 'over' : (isExact && data ? 'ct-exact' : '')
+      isOver ? 'over' : (isExact && data ? 'ct-exact' : ''),
+      stripeClass
     ].filter(Boolean).join(' ');
 
     const dayNum = d.getDate();
@@ -585,9 +624,16 @@ function buildCalendar(month) {
         <div class="fac-num" style="color:${ctc}">${cv}</div>
       </div>`;
 
+      // Build arrival pills
+      const arrPills = cellArrivals.map(a => {
+        const cls = a.source.toLowerCase() === 'progro' ? 'progro' : a.source.toLowerCase() === 'fhg' ? 'fhg' : 'pa';
+        return `<div class="arrival-pill arrival-pill-${cls}">${a.source} ${a.room}</div>`;
+      }).join('');
+
       cell.innerHTML = `
         <div class="cell-date">${dateLabel}</div>
         <div class="fac-bars">${bars}${ctbar}</div>
+        ${arrPills ? `<div class="arrival-pills">${arrPills}</div>` : ''}
         ${isOver
           ? `<div class="over-badge">OVER ${Math.abs(cv)}</div>`
           : `<div class="view-hint">${adminUnlocked ? '▸ EDIT' : '▸ VIEW'}</div>`}`;
@@ -675,7 +721,20 @@ function renderModalBody() {
       <div class="save-status" id="saveStatus"></div>
       <button class="btn-save" id="saveBtn" onclick="saveDay()">SAVE CHANGES</button>`;
 
+  // Build arrivals section for modal
+  const modalArrivals = ARRIVALS[activeDate] || [];
+  const arrivalSection = modalArrivals.length > 0 ? `
+    <div class="arrival-modal-section">
+      <div class="arrival-modal-title">⬇ INCOMING PRODUCT TO CT</div>
+      ${modalArrivals.map(a => `
+        <div class="arrival-modal-item">
+          <div class="arrival-modal-pip" style="background:${a.color}"></div>
+          <span>${a.source} — Room ${a.room} product arriving</span>
+        </div>`).join('')}
+    </div>` : '';
+
   document.getElementById('modalBody').innerHTML = `
+    ${arrivalSection}
     ${cards}
     <div class="fac-card">
       <div class="fac-card-hdr">
