@@ -332,6 +332,9 @@ const MONTHS_LABEL = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT
 const DAYNAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 // Available months — add new months here as you build them
+// ⚠️  IMPORTANT: When seeding a new month's SQL, NEVER include padding rows for
+// neighboring months — they will overwrite real data. The calendar fetches
+// surrounding days directly from Supabase using their own month's records.
 const AVAILABLE_MONTHS = [
   { key: '2026-05', label: 'MAY 2026' },
   { key: '2026-06', label: 'JUN 2026' },
@@ -366,7 +369,11 @@ let pbuf = '', pmode = 'unlock', pnew = '';
 
 // ── SUPABASE API ──
 async function fetchSchedule(month) {
-  const rows = await sbFetch(`schedules?month=eq.${month}&order=date.asc`);
+  // Fetch by date range to avoid any month-label mismatches
+  const [yr, mo] = month.split('-').map(Number);
+  const startDate = `${month}-01`;
+  const endDate = new Date(yr, mo, 0).toISOString().split('T')[0]; // last day of month
+  const rows = await sbFetch(`schedules?date=gte.${startDate}&date=lte.${endDate}&order=date.asc`);
   const result = {};
   for (const row of rows) {
     result[row.date] = {
@@ -386,13 +393,17 @@ async function fetchSettings() {
 
 async function saveScheduleRow(date, data) {
   const month = date.slice(0, 7);
-  await sbFetch('schedules?date=eq.' + date, {
-    method: 'PATCH',
-    prefer: 'return=minimal',
+  // Use UPSERT so missing rows are created automatically
+  await sbFetch('schedules', {
+    method: 'POST',
+    prefer: 'resolution=merge-duplicates,return=minimal',
+    headers: {'Prefer': 'resolution=merge-duplicates,return=minimal'},
     body: JSON.stringify({
+      month: month,
+      date: date,
       progro: data.progro, fhg: data.fhg, pa: data.pa, t1: data.t1, ct: data.ct,
-      task_progro: data.tasks.progro, task_fhg: data.tasks.fhg,
-      task_pa: data.tasks.pa, task_t1: data.tasks.t1,
+      task_progro: data.tasks.progro || '', task_fhg: data.tasks.fhg || '',
+      task_pa: data.tasks.pa || '', task_t1: data.tasks.t1 || '',
       updated_at: new Date().toISOString()
     })
   });
