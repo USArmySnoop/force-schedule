@@ -838,7 +838,7 @@ function renderModalBody() {
 
   // Arrival admin section
   const dayArrivals = ARRIVALS[activeDate] || [];
-  const arrivalAdminHTML = admin ? `
+  const arrivalAdminHTML = adminUnlocked ? `
     <div class="arrival-admin-section">
       <div class="arrival-admin-title">⬇ CT PRODUCT ARRIVALS</div>
       <div id="arrivalList">
